@@ -52,7 +52,10 @@ abstract class BaseTransformer
 
     abstract protected function shouldSkip(array $item): bool;
 
-    abstract protected function warehouseName(array $item): string;
+    protected function warehouseName(array $item): string
+    {
+        return $item['warehouse_name'] ?? 'UNKNOWN';
+    }
 
     abstract protected function dateValue(array $item): string;
 

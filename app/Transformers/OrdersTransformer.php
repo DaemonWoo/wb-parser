@@ -24,11 +24,6 @@ class OrdersTransformer extends BaseTransformer
         return empty($item['nm_id']) || empty($item['g_number']);
     }
 
-    protected function warehouseName(array $item): string
-    {
-        return $item['warehouse_name'] ?? 'UNKNOWN';
-    }
-
     protected function dateValue(array $item): string
     {
         return $item['date'] ?? now()->toDateString();

@@ -25,11 +25,6 @@ class StocksTransformer extends BaseTransformer
         return empty($item['nm_id']) || empty($item['warehouse_name']) || empty($item['date']);
     }
 
-    protected function warehouseName(array $item): string
-    {
-        return $item['warehouse_name'];
-    }
-
     protected function dateValue(array $item): string
     {
         return $item['date'];

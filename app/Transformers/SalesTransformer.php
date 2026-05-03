@@ -31,11 +31,6 @@ class SalesTransformer extends BaseTransformer
         return ! isset($item['nm_id']);
     }
 
-    protected function warehouseName(array $item): string
-    {
-        return $item['warehouse_name'] ?? 'UNKNOWN';
-    }
-
     protected function dateValue(array $item): string
     {
         return $item['date'] ?? now()->toDateString();

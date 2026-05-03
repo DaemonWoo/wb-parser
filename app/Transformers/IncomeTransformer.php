@@ -20,11 +20,6 @@ class IncomeTransformer extends BaseTransformer
         return ! isset($item['income_id']) || ! isset($item['nm_id']);
     }
 
-    protected function warehouseName(array $item): string
-    {
-        return $item['warehouse_name'];
-    }
-
     protected function dateValue(array $item): string
     {
         return $item['date'];
