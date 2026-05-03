@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Income extends Model
 {
@@ -25,17 +26,17 @@ class Income extends Model
         'total_price' => 'decimal:2',
     ];
 
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function warehouse()
+    public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function dimDate()
+    public function dimDate(): BelongsTo
     {
         return $this->belongsTo(DimDate::class, 'date_id');
     }

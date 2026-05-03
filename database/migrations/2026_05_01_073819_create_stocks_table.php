@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('stocks', function (Blueprint $table) {
             $table->id();
-            
+
             $table->date('last_change_date')->nullable();
 
             $table->integer('quantity')->nullable();
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->foreignId('date_id')->constrained('dim_dates');
 
             $table->unique(['product_id', 'warehouse_id', 'date_id']);
-            
+
             $table->timestamps();
         });
     }

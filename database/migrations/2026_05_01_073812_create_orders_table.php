@@ -16,7 +16,6 @@ return new class extends Migration
 
             $table->string('g_number')->nullable();
 
-            $table->dateTime('date');
             $table->date('last_change_date')->nullable();
 
             $table->decimal('total_price', 12, 2)->nullable();
