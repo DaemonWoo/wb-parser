@@ -1,5 +1,5 @@
 Для стягивания данных нужно запустить команду: php artisan app:sync-data
-
+Все даты захардкожены в классе SyncService
 ## Доступы к базе данных
 - DB_CONNECTION=mysql
 - DB_HOST=switchyard.proxy.rlwy.net:36844
