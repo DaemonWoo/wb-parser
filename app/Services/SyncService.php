@@ -12,6 +12,7 @@ use App\Transformers\SalesTransformer;
 use App\Transformers\StocksTransformer;
 use Carbon\Carbon;
 use Illuminate\Console\OutputStyle;
+use Illuminate\Database\Eloquent\Model;
 
 class SyncService
 {
@@ -34,7 +35,7 @@ class SyncService
                 'dateTo' => '2026-04-30',
             ],
             output: $output,
-            transform: fn ($items) => $this->salesTransformer->transform($items)
+            transform: fn($items) => $this->salesTransformer->transform($items),
         );
     }
 
@@ -49,7 +50,7 @@ class SyncService
                 'dateTo' => '2026-04-30',
             ],
             output: $output,
-            transform: fn ($items) => $this->incomesTransformer->transform($items)
+            transform: fn($items) => $this->incomesTransformer->transform($items),
         );
     }
 
@@ -65,7 +66,7 @@ class SyncService
                 'dateFrom' => $today,
             ],
             output: $output,
-            transform: fn ($items) => $this->stocksTransformer->transform($items)
+            transform: fn($items) => $this->stocksTransformer->transform($items),
         );
     }
 
@@ -80,55 +81,55 @@ class SyncService
                 'dateTo' => '2026-04-30',
             ],
             output: $output,
-            transform: fn ($items) => $this->ordersTransformer->transform($items)
+            transform: fn($items) => $this->ordersTransformer->transform($items),
         );
     }
 
+    /**
+     * @param class-string<Model> $model
+     */
     private function sync(
         string $endpoint,
         string $model,
         array $uniqueKeys,
         array $params,
         OutputStyle $output,
-        callable $transform
+        callable $transform,
     ): int {
         $page = 1;
-        $total = 0;
-
+        $totalItems = 0;
         $totalPages = $this->api->getTotalPages($endpoint, $params);
+        $concurrency = 10;
 
-        do {
-            $items = $this->api->fetchPage($endpoint, $params, $page);
+        $output->progressStart($totalPages);
 
-            if ($items === null) {
-                $output->error("Request failed on page {$page}");
+        $endPage = min($page + $concurrency - 1, $totalPages);
+        while ($page <= $totalPages) {
+            $pages = range($page, $endPage);
 
-                return $total;
+            $pagesData = $this->api->fetchPagesParallel(
+                endpoint: $endpoint,
+                params: $params,
+                startPage: $page,
+                endPage: $endPage,
+                concurrency: $concurrency,
+            );
+
+            foreach ($pagesData as $items) {
+                $rows = $transform($items);
+                $updateColumns = array_diff(array_keys($rows[0]), ['created_at', ...$uniqueKeys]);
+
+                $model::upsert($rows, $uniqueKeys, $updateColumns);
+
+                $totalItems += count($items);
             }
 
-            if (empty($items)) {
-                $output->warning("Empty response on page {$page}");
-                break;
-            }
+            $output->progressAdvance(count($pages));
+            $page += $concurrency;
+        }
 
-            $rows = $transform($items);
+        $output->progressFinish();
 
-            if (! empty($rows)) {
-                $updateColumns = array_diff(
-                    array_keys($rows[0]),
-                    array_merge($uniqueKeys, ['created_at'])
-                );
-                $model::upsert(
-                    $rows,
-                    $uniqueKeys,
-                    $updateColumns
-                );
-            }
-
-            $total += count($items);
-            $page++;
-        } while ($page <= $totalPages);
-
-        return $total;
+        return $totalItems;
     }
 }

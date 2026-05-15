@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        //        DB::whenQueryingForLongerThan(500, function (Connection $connection, QueryExecuted $event) {
+        //            $this->info('Query takes longer that 500ms!');
+        //        });
     }
 }

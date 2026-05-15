@@ -15,6 +15,7 @@ class SyncData extends Command
     public function handle(SyncService $syncService): int
     {
         $this->info('Syncing...');
+        $start = microtime(true);
 
         $count = $syncService->syncSales($this->output);
 
@@ -24,6 +25,10 @@ class SyncData extends Command
 
         $count += $syncService->syncOrders($this->output);
 
+        $end = microtime(true);
+        $duration = round($end - $start, 3);
+
+        $this->info("✅ Готово за {$duration} сек.");
         $this->info("Synced: {$count}");
 
         return CommandAlias::SUCCESS;

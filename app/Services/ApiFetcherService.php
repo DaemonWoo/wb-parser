@@ -6,61 +6,60 @@ use Illuminate\Support\Facades\Http;
 
 class ApiFetcherService
 {
-    protected string $baseUrl;
+    public string $baseUrl;
 
-    protected string $key;
+    public string $key;
 
-    protected int $limit = 500;
+    public int $limit = 500;
 
     public function __construct()
     {
         $config = config('services.wb');
-
         $this->baseUrl = "{$config['protocol']}://{$config['host']}:{$config['port']}/api";
         $this->key = $config['key'];
     }
 
-    public function fetchPage(string $endpoint, array $params, int $page): ?array
-    {
-        $response = Http::retry(3, 2000)->timeout(30)->get("{$this->baseUrl}/{$endpoint}", array_merge($params, [
-            'page' => $page,
-            'limit' => $this->limit,
-            'key' => $this->key,
-        ]));
-
-        if (! $response->successful()) {
-            return null;
-        }
-
-        return $response->json()['data'] ?? [];
-    }
-
-    public function saveChunks(string $model, array $items, array $uniqueKeys): void
-    {
-        $chunks = collect($items)->chunk(500);
-
-        foreach ($chunks as $chunk) {
-            if ($chunk->isEmpty()) {
-                continue;
-            }
-            $model::upsert(
-                $chunk->toArray(),
-                $uniqueKeys,
-                array_keys($chunk->first())
-            );
-        }
-    }
-
     public function getTotalPages(string $endpoint, array $params): int
     {
-        $response = Http::retry(3, 2000)->timeout(30)->get("{$this->baseUrl}/{$endpoint}", array_merge($params, [
-            'page' => 1,
-            'limit' => 1,
-            'key' => $this->key,
-        ]));
+        $response = Http::retry(3, 2000)->timeout(30)->get(
+            "{$this->baseUrl}/{$endpoint}",
+            array_merge($params, ['page' => 1, 'limit' => 1, 'key' => $this->key]),
+        );
 
-        $total = ceil(($response->json()['meta']['total'] ?? 0) / $this->limit);
+        return (int)ceil(($response->json()['meta']['total'] ?? 0) / $this->limit);
+    }
 
-        return $total;
+    public function fetchPagesParallel(
+        string $endpoint,
+        array $params,
+        int $startPage,
+        int $endPage,
+        int $concurrency = 10,
+    ): array {
+        $results = [];
+        $pages = range($startPage, $endPage);
+        $chunks = array_chunk($pages, $concurrency);
+
+        foreach ($chunks as $chunk) {
+            $responses = Http::pool(function ($pool) use ($chunk, $endpoint, $params) {
+                return collect($chunk)->map(function ($page) use ($pool, $endpoint, $params) {
+                    return $pool->timeout(30)->retry(3, 2000)->get(
+                        "{$this->baseUrl}/{$endpoint}",
+                        [...$params, 'page' => $page, 'limit' => $this->limit, 'key' => $this->key],
+                    );
+                })->all();
+            });
+            foreach ($responses as $response) {
+                if (!$response || !$response->successful()) {
+                    continue;
+                }
+                $data = $response->json()['data'] ?? [];
+                if (!empty($data)) {
+                    $results[] = $data;
+                }
+            }
+        }
+
+        return $results;
     }
 }
